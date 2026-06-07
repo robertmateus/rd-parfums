@@ -1,6 +1,14 @@
-import { useState } from 'react';
-import { CartItem } from '../types';
-import { X, Trash2, MessageSquare, Plus, Minus, Inbox, Sparkles } from 'lucide-react';
+import { useState } from "react";
+import { CartItem } from "../types";
+import {
+  X,
+  Trash2,
+  MessageSquare,
+  Plus,
+  Minus,
+  Inbox,
+  Sparkles,
+} from "lucide-react";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -17,9 +25,9 @@ export default function CartDrawer({
   onUpdateQuantity,
   onRemoveItem,
 }: CartDrawerProps) {
-  const [userName, setUserName] = useState('');
-  const [userPhone, setUserPhone] = useState('');
-  const [phoneError, setPhoneError] = useState('');
+  const [userName, setUserName] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   // Standard static price from catalog
   const getItemPrice = (item: CartItem): number => {
@@ -27,41 +35,44 @@ export default function CartDrawer({
   };
 
   const getSubtotal = (): number => {
-    return cartItems.reduce((acc, item) => acc + getItemPrice(item) * item.quantity, 0);
+    return cartItems.reduce(
+      (acc, item) => acc + getItemPrice(item) * item.quantity,
+      0,
+    );
   };
 
   // Generate customized elegant whatsapp link message with direct contact link for helper
   const triggerWhatsApp = () => {
     if (!userName.trim()) {
-      setPhoneError('Por favor, informe seu nome.');
+      setPhoneError("Por favor, informe seu nome.");
       return;
     }
-    const cleanPhone = userPhone.replace(/\D/g, '');
+    const cleanPhone = userPhone.replace(/\D/g, "");
     if (cleanPhone.length < 10) {
-      setPhoneError('Por favor, insira o seu WhatsApp (com DDD).');
+      setPhoneError("Por favor, insira o seu WhatsApp (com DDD).");
       return;
     }
 
-    const phoneNumber = '5543998757065'; // RD Parfums boutique owner / seller representative
-    let message = '✨ *RD PARFUMS - NOVA CONSULTA DE INTERESSE* ✨\n\n';
+    const phoneNumber = "5541999178435"; // RD Parfums boutique owner / seller representative
+    let message = "✨ *RD PARFUMS - NOVA CONSULTA DE INTERESSE* ✨\n\n";
     message += `👤 *Nome do Cliente:* ${userName.trim()}\n`;
     message += `📞 *Contato:* +${cleanPhone}\n`;
     message += `💬 *Iniciar conversa direta com o cliente:* https://wa.me/${cleanPhone}\n\n`;
-    message += '📋 *Fragrâncias de Interesse:* \n';
+    message += "📋 *Fragrâncias de Interesse:* \n";
 
     cartItems.forEach((item, index) => {
       const price = getItemPrice(item);
       message += `\n⚜️ *${item.perfume.name}*\n`;
-      message += `   • Valor Unitário: R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+      message += `   • Valor Unitário: R$ ${price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
       message += `   • Quantidade: ${item.quantity} unidade(s)\n`;
-      message += `   • Total deste Item: R$ ${(price * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+      message += `   • Total deste Item: R$ ${(price * item.quantity).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
     });
 
-    message += `\n💰 *Total Geral:* R$ ${getSubtotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
-    message += '_Mensagem automática enviada a partir do Catálogo RD Parfums._';
+    message += `\n💰 *Total Geral:* R$ ${getSubtotal().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n`;
+    message += "_Mensagem automática enviada a partir do Catálogo RD Parfums._";
 
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/${phoneNumber}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${phoneNumber}?text=${encoded}`, "_blank");
   };
 
   if (!isOpen) return null;
@@ -151,7 +162,10 @@ export default function CartDrawer({
 
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="font-mono text-[10px] text-zinc-400">
-                          R$ {itemPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R${" "}
+                          {itemPrice.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -160,7 +174,9 @@ export default function CartDrawer({
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center border border-zinc-800/80 rounded-sm bg-black/20">
                         <button
-                          onClick={() => onUpdateQuantity(index, item.quantity - 1)}
+                          onClick={() =>
+                            onUpdateQuantity(index, item.quantity - 1)
+                          }
                           disabled={item.quantity <= 1}
                           className="p-1 px-2.5 text-zinc-500 hover:text-white disabled:opacity-30 cursor-pointer text-xs"
                           aria-label="Diminuir"
@@ -171,7 +187,9 @@ export default function CartDrawer({
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => onUpdateQuantity(index, item.quantity + 1)}
+                          onClick={() =>
+                            onUpdateQuantity(index, item.quantity + 1)
+                          }
                           className="p-1 px-2.5 text-zinc-500 hover:text-white cursor-pointer text-xs"
                           aria-label="Aumentar"
                         >
@@ -180,7 +198,10 @@ export default function CartDrawer({
                       </div>
 
                       <span className="font-mono text-xs font-semibold text-white">
-                        R$ {(itemPrice * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R${" "}
+                        {(itemPrice * item.quantity).toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
                   </div>
@@ -212,10 +233,12 @@ export default function CartDrawer({
                   value={userPhone}
                   onChange={(e) => {
                     setUserPhone(e.target.value);
-                    if (phoneError) setPhoneError('');
+                    if (phoneError) setPhoneError("");
                   }}
                   className={`w-full bg-luxury-950 border ${
-                    phoneError ? 'border-red-500/50' : 'border-zinc-800/80 focus:border-gold-500/70'
+                    phoneError
+                      ? "border-red-500/50"
+                      : "border-zinc-800/80 focus:border-gold-500/70"
                   } p-2.5 rounded-sm text-xs text-white placeholder-zinc-650 outline-none transition-colors font-mono`}
                 />
                 {phoneError && (
@@ -231,7 +254,10 @@ export default function CartDrawer({
                 Subtotal Estimado:
               </span>
               <span className="font-mono text-xl font-bold text-gold-300">
-                R$ {getSubtotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R${" "}
+                {getSubtotal().toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
               </span>
             </div>
 

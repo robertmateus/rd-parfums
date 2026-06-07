@@ -12,6 +12,7 @@ export interface Perfume {
   baseNotes: string[];
   volumeAvailable: string[]; // e.g. ["50ml", "100ml"]
   isBestSeller?: boolean;
+  inStock?: boolean;
 }
 
 export interface CartItem {

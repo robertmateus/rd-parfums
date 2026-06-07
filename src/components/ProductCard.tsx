@@ -26,10 +26,19 @@ export default function ProductCard({
         </span>
       )}
 
+      {/* Stock Badge */}
+      {perfume.inStock === false && (
+        <span className="absolute top-4 right-4 z-10 px-2 py-0.5 bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-2xs text-[9px] font-mono tracking-widest text-red-300">
+          SEM ESTOQUE
+        </span>
+      )}
+
       {/* Scent Intensity Tag in Top Right */}
-      <span className="absolute top-4 right-4 z-10 px-2 py-0.5 bg-black/70 backdrop-blur-md border border-zinc-800/80 rounded-2xs text-[9px] font-mono tracking-widest text-gold-300">
-        {perfume.intensity}
-      </span>
+      {perfume.inStock !== false && (
+        <span className="absolute top-4 right-4 z-10 px-2 py-0.5 bg-black/70 backdrop-blur-md border border-zinc-800/80 rounded-2xs text-[9px] font-mono tracking-widest text-gold-300">
+          {perfume.intensity}
+        </span>
+      )}
 
       {/* Card Clickable Area for Detail View */}
       <div
@@ -89,11 +98,16 @@ export default function ProductCard({
         <div className="flex flex-col gap-2 mt-2">
           {/* Buy WhatsApp Prompt */}
           <button
-            onClick={() => onAddToCart(perfume)}
-            className="w-full py-3 border border-zinc-800 hover:border-gold-500 text-[10px] font-mono tracking-widest text-zinc-300 hover:text-white bg-black/40 hover:bg-gold-950/20 transition-all duration-500 cursor-pointer flex items-center justify-center gap-2 group/btn uppercase"
+            onClick={() => perfume.inStock !== false && onAddToCart(perfume)}
+            disabled={perfume.inStock === false}
+            className={`w-full py-3 border text-[10px] font-mono tracking-widest uppercase transition-all duration-500 flex items-center justify-center gap-2 group/btn rounded-sm ${
+              perfume.inStock === false
+                ? 'border-red-500/20 bg-red-500/10 text-red-300 cursor-not-allowed'
+                : 'border-zinc-800 hover:border-gold-500 text-zinc-300 hover:text-white bg-black/40 hover:bg-gold-950/20 cursor-pointer'
+            }`}
           >
             <MessageCircle className="w-3.5 h-3.5 text-gold-400 group-hover/btn:scale-110 group-hover/btn:text-gold-300 transition-all" />
-            COMPRAR VIA WHATSAPP
+            {perfume.inStock === false ? 'INDISPONÍVEL' : 'COMPRAR VIA WHATSAPP'}
           </button>
         </div>
       </div>

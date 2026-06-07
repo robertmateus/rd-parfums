@@ -104,6 +104,20 @@
   }
 }
 
+@media (max-width: 767px) and (orientation: landscape) {
+  .consultoria-hide-landscape {
+    display: none !important;
+  }
+
+  .consultoria-feature-item {
+    justify-content: center;
+  }
+
+  .consultoria-feature-text {
+    text-align: center;
+  }
+}
+
 .shine-effect {
   position: relative;
   overflow: hidden;

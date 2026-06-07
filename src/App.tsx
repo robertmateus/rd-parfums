@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { PERFUMES_DATA } from "./data/perfumes";
 import * as perfumeService from "./data/perfumeService";
 import { Perfume, CartItem } from "./types";
+import personalShopper from "./assets/images/personal.png";
 import {
   Sparkles,
   MessageCircle,
@@ -146,7 +147,7 @@ export default function App() {
   };
 
   const triggerConsultingWhatsApp = () => {
-    const phone = "5543998757065";
+    const phone = "5541999178435";
     const msg =
       "Olá, prezados! Através de seu catálogo digital, manifesto o meu interesse em solicitar uma assessoria profissional e exclusiva para me acompanhar na seleção da minha próxima fragrância ideal. Aguardo o contato para darmos início à consultoria. Muito obrigado.";
     window.open(
@@ -215,9 +216,6 @@ export default function App() {
         {/* Title Elements */}
         <div className="flex flex-col md:flex-row items-center md:items-end justify-center md:justify-between gap-6 mb-12 border-b border-zinc-800/30 pb-10 text-center md:text-left">
           <div>
-            <span className="font-mono text-[10px] tracking-[0.3em] text-gold-400 uppercase font-semibold mb-2 block">
-              Curated Selection
-            </span>
             <h2 className="font-serif text-3xl md:text-5xl text-white tracking-wide">
               Destaques da Coleção
             </h2>
@@ -307,9 +305,6 @@ export default function App() {
         <div className="absolute bottom-10 right-20 w-3.5 h-3.5 bg-gold-500 rounded-full blur-[4px] opacity-40"></div>
 
         <div className="max-w-xl mx-auto px-4 relative z-10">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-gold-400 uppercase flex items-center justify-center gap-1.5 mb-2.5">
-            <Sparkles className="w-3.5 h-3.5 text-gold-400" /> Alquimia Seletiva
-          </span>
           <h3 className="font-serif text-2xl md:text-3.5xl text-white tracking-widest leading-snug mb-4">
             Dúvidas de qual fragrância escolher?
           </h3>
@@ -332,33 +327,30 @@ export default function App() {
         id="consultoria"
         className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 scroll-mt-20"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center text-center lg:text-left">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 md:gap-24 items-center text-center lg:text-left">
           {/* Information Column */}
           <div>
             <span className="font-mono text-[10px] tracking-[0.3em] text-gold-400 uppercase font-semibold mb-2 block">
               Atendimento Exclusivo
             </span>
-            <h2 className="font-serif text-3xl md:text-4.5xl text-white tracking-wide mb-6 leading-tight">
+            <h2 className="font-serif text-2xl md:text-3xl lg:text-4.5xl text-white tracking-wide mb-6 leading-tight">
               Encontre a sua fragrância perfeita com nossa consultoria
             </h2>
-            <p className="font-sans text-sm text-zinc-300 font-light leading-relaxed mb-8">
-              Nossos especialistas em alta perfumaria estão prontos para guiar
-              você em uma jornada olfativa totalmente personalizada. Tire
-              dúvidas sobre notas, volumetrias, ocasiões ideais ou personalize
-              sua embalagem com exclusividade total através de nosso canal de
-              concierge no WhatsApp.
+            <p className="font-sans text-sm sm:text-base text-zinc-300 font-light leading-relaxed mb-10">
+              Tire suas dúvidas sobre notas, volumetrias, ocasiões ideais ou
+              personalize sua embalagem com exclusividade total através de nosso
+              canal de concierge no WhatsApp.
             </p>
 
             {/* Structured features */}
-            <div className="space-y-4 mb-10">
-              <div className="flex items-start gap-3">
+            {/* Structured features */}
+            <div className="space-y-4 mb-10 consultoria-feature-group">
+              <div className="flex items-start justify-center lg:justify-start gap-3 consultoria-feature-item">
                 <div className="h-5 w-5 rounded-full border border-gold-500/30 flex items-center justify-center bg-gold-400/5 mt-0.5 shrink-0">
                   <ShieldCheck className="w-3 h-3 text-gold-400" />
                 </div>
-                <div>
-                  <h4 className="font-sans text-sm text-zinc-200 font-semibold uppercase">
-                    Curadoria de Especialistas
-                  </h4>
+
+                <div className="consultoria-feature-text text-center lg:text-left">
                   <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed font-light">
                     Análise aprofundada baseada em seu gosto sensorial para
                     recomendar as fragrâncias mais raras e nobres.
@@ -370,7 +362,7 @@ export default function App() {
             {/* Consulting button */}
             <button
               onClick={triggerConsultingWhatsApp}
-              className="mx-auto lg:mx-0 px-8 py-4.5 bg-gold-500 text-luxury-950 font-mono text-sm sm:text-xs font-bold tracking-widest uppercase hover:bg-gold-400 transition-all cursor-pointer rounded-sm flex items-center gap-2"
+              className="consultoria-hide-landscape mx-auto lg:mx-0 px-8 py-4.5 bg-gold-500 text-luxury-950 font-mono text-sm sm:text-xs font-bold tracking-widest uppercase hover:bg-gold-400 transition-all cursor-pointer rounded-sm flex items-center gap-2"
             >
               FALAR COM CONSULTOR{" "}
               <ArrowUpRight className="w-4 h-4 text-luxury-900" />
@@ -385,7 +377,7 @@ export default function App() {
             {/* Main Image Frame */}
             <div className="relative bg-luxury-900 border border-gold-900/10 rounded-sm overflow-hidden aspect-[4/5] z-10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:-translate-x-1 hover:-translate-y-1">
               <img
-                src="/src/assets/images/personal_shopper_1780834543184.png"
+                src={personalShopper}
                 alt="Personal Shopper RD Parfums"
                 className="w-full h-full object-cover grayscale-15 brightness-95"
                 referrerPolicy="no-referrer"

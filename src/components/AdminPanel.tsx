@@ -7,7 +7,6 @@ import {
   RotateCcw,
   Check,
   Lock,
-  Sparkles,
   AlertCircle,
   LogOut,
   FileText,
@@ -20,7 +19,6 @@ import {
   Key,
   RefreshCw,
   Upload,
-  Image,
   Link,
 } from "lucide-react";
 import { Perfume } from "../types";
@@ -34,35 +32,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-
-// A selection of highly curated, elegant placeholder images from the original catalog
-// to allow the user to easily assign a gorgeous AI-generated bottle visual to newly added perfumes.
-const LUXURY_BOTTLE_PRESETS = [
-  {
-    name: "Ouro Real / Imperial",
-    url: "/src/assets/images/oud_imperial_1780834555426.png",
-  },
-  {
-    name: "Rosa Veludo / Midnight",
-    url: "/src/assets/images/midnight_rose_1780834568109.png",
-  },
-  {
-    name: " Riviera Sol / Dorée",
-    url: "/src/assets/images/lessence_doree_1780834579920.png",
-  },
-  {
-    name: "Couro Imperial / Noir",
-    url: "/src/assets/images/noir_eternel_1780834596396.png",
-  },
-  {
-    name: "Seda Talco / Lune",
-    url: "/src/assets/images/eclat_de_lune_1780834608813.png",
-  },
-  {
-    name: "Sândalo Rústico / Sacré",
-    url: "/src/assets/images/santal_sacre_1780834621893.png",
-  },
-];
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -124,18 +93,19 @@ export default function AdminPanel({
     category: "FEMININO" as "MASCULINO" | "FEMININO",
     family: "",
     intensity: "Moderado" as "Suave" | "Moderado" | "Intenso",
-    image: LUXURY_BOTTLE_PRESETS[0].url,
+    image: "",
     description: "",
     topNotesText: "",
     heartNotesText: "",
     baseNotesText: "",
     volumesText: "50ml, 100ml",
     isBestSeller: false,
+    inStock: true,
   });
 
-  const [activeImageTab, setActiveImageTab] = useState<
-    "presets" | "upload" | "url"
-  >("presets");
+  const [activeImageTab, setActiveImageTab] = useState<"upload" | "url">(
+    "upload",
+  );
   const [dragActive, setDragActive] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -536,20 +506,21 @@ export default function AdminPanel({
   const openAddForm = () => {
     setIsEditing(true);
     setEditingId(null);
-    setActiveImageTab("presets");
+    setActiveImageTab("upload");
     setFormData({
       name: "",
       price: 650,
       category: "FEMININO",
       family: "Floral • Sofisticado • Nobre",
       intensity: "Moderado",
-      image: LUXURY_BOTTLE_PRESETS[0].url,
+      image: "",
       description: "",
       topNotesText: "Pimenta Rosa, Maçã Verde",
       heartNotesText: "Rosa Damascena, Jasmim",
       baseNotesText: "Sândalo, Baunilha Bourbon",
       volumesText: "50ml, 100ml",
       isBestSeller: false,
+      inStock: true,
     });
   };
 
@@ -558,12 +529,7 @@ export default function AdminPanel({
     setEditingId(perfume.id);
 
     // Auto detect active image tab based on current value
-    const isPreset = LUXURY_BOTTLE_PRESETS.some(
-      (preset) => preset.url === perfume.image,
-    );
-    if (isPreset) {
-      setActiveImageTab("presets");
-    } else if (perfume.image && perfume.image.startsWith("data:image/")) {
+    if (perfume.image && perfume.image.startsWith("data:image/")) {
       setActiveImageTab("upload");
     } else {
       setActiveImageTab("url");
@@ -582,6 +548,7 @@ export default function AdminPanel({
       baseNotesText: perfume.baseNotes.join(", "),
       volumesText: perfume.volumeAvailable.join(", "),
       isBestSeller: !!perfume.isBestSeller,
+      inStock: perfume.inStock !== false,
     });
   };
 
@@ -727,6 +694,7 @@ export default function AdminPanel({
         .map((v) => v.trim())
         .filter(Boolean),
       isBestSeller: formData.isBestSeller,
+      inStock: formData.inStock,
     };
 
     try {
@@ -785,7 +753,7 @@ export default function AdminPanel({
         <div className="p-6 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-gold-950/10 border border-gold-950/30">
-              <Sparkles className="w-5 h-5 text-gold-400" />
+              <ShieldCheck className="w-5 h-5 text-gold-400" />
             </div>
             <div>
               <h1 className="font-serif text-2xl text-white tracking-wide">
@@ -951,7 +919,7 @@ export default function AdminPanel({
                         type="email"
                         value={emailLogin}
                         onChange={(e) => setEmailLogin(e.target.value)}
-                        placeholder="contatorobertgomes@gmail.com"
+                        placeholder="Digite seu e-mail"
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 pl-11 pr-4 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-gold-500 transition-colors"
                         required
                         disabled={
@@ -970,7 +938,7 @@ export default function AdminPanel({
                         type="password"
                         value={passwordLogin}
                         onChange={(e) => setPasswordLogin(e.target.value)}
-                        placeholder="••••••••••••"
+                        placeholder="Digite sua senha"
                         className="w-full bg-zinc-950 border border-zinc-800 rounded-lg py-2.5 pl-11 pr-4 text-sm text-white placeholder-zinc-700 focus:outline-none focus:border-gold-500 transition-colors"
                         required
                         disabled={
@@ -1045,8 +1013,12 @@ export default function AdminPanel({
                   title="Histórico de Auditoria de Segurança"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{showSecurityLogs ? "Ver Catálogo" : "Trilha Auditoria"}</span>
-                  <span className="sm:hidden">{showSecurityLogs ? "Catálogo" : "Auditoria"}</span>
+                  <span className="hidden sm:inline">
+                    {showSecurityLogs ? "Ver Catálogo" : "Trilha Auditoria"}
+                  </span>
+                  <span className="sm:hidden">
+                    {showSecurityLogs ? "Catálogo" : "Auditoria"}
+                  </span>
                 </button>
                 <button
                   onClick={handleLogout}
@@ -1310,7 +1282,7 @@ export default function AdminPanel({
                       </div>
                     </div>
 
-                    <div className="p-3 bg-zinc-950/40 border border-zinc-900 rounded-sm">
+                    <div className="p-3 bg-zinc-950/40 border border-zinc-900 rounded-sm space-y-3">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -1325,6 +1297,22 @@ export default function AdminPanel({
                         />
                         <span className="text-xs text-zinc-200 font-medium">
                           Marcar como Em Destaque (Best Seller)
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={formData.inStock}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              inStock: e.target.checked,
+                            })
+                          }
+                          className="rounded border-zinc-800 text-gold-500 focus:ring-0 focus:ring-offset-0 bg-transparent w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-xs text-zinc-200 font-medium">
+                          Produto em estoque
                         </span>
                       </label>
                     </div>
@@ -1421,19 +1409,6 @@ export default function AdminPanel({
                       <div className="flex gap-1.5 mb-3 bg-black/40 p-1 rounded-md border border-zinc-900">
                         <button
                           type="button"
-                          onClick={() => setActiveImageTab("presets")}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[10px] font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
-                            activeImageTab === "presets"
-                              ? "bg-gold-500/10 text-gold-400 border border-gold-400/20 shadow-sm"
-                              : "text-zinc-500 hover:text-zinc-300 border border-transparent"
-                          }`}
-                        >
-                          <Image className="w-3 h-3" />
-                          Predefinições de Luxo
-                        </button>
-
-                        <button
-                          type="button"
                           onClick={() => setActiveImageTab("upload")}
                           className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[10px] font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
                             activeImageTab === "upload"
@@ -1458,59 +1433,6 @@ export default function AdminPanel({
                           Endereço URL
                         </button>
                       </div>
-
-                      {/* Form Content depending on tab */}
-                      {activeImageTab === "presets" && (
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-mono text-zinc-500 block">
-                            Selecione uma de nossas artes conceituais de alta
-                            definição:
-                          </label>
-                          <div className="grid grid-cols-6 gap-2 mb-1">
-                            {LUXURY_BOTTLE_PRESETS.map((preset, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() =>
-                                  setFormData({
-                                    ...formData,
-                                    image: preset.url,
-                                  })
-                                }
-                                className={`aspect-square overflow-hidden rounded border transition-all cursor-pointer ${
-                                  formData.image === preset.url
-                                    ? "border-gold-400 ring-1 ring-gold-400 shadow-lg shadow-gold-500/5"
-                                    : "border-zinc-850 opacity-40 hover:opacity-100 hover:border-zinc-700"
-                                }`}
-                                title={preset.name}
-                              >
-                                <img
-                                  src={preset.url}
-                                  alt={preset.name}
-                                  className="w-full h-full object-cover"
-                                />
-                                {formData.image === preset.url && (
-                                  <div className="absolute inset-0 bg-gold-400/15 flex items-center justify-center pointer-events-none">
-                                    <Check className="w-4 h-4 text-gold-400 bg-zinc-950/90 rounded-full p-0.5 border border-gold-400/30" />
-                                  </div>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                          {LUXURY_BOTTLE_PRESETS.some(
-                            (p) => p.url === formData.image,
-                          ) && (
-                            <p className="text-[10px] font-mono text-gold-400 text-center uppercase tracking-widest pt-1">
-                              Selecionado:{" "}
-                              {
-                                LUXURY_BOTTLE_PRESETS.find(
-                                  (p) => p.url === formData.image,
-                                )?.name
-                              }
-                            </p>
-                          )}
-                        </div>
-                      )}
 
                       {activeImageTab === "upload" && (
                         <div className="space-y-3">
@@ -1575,7 +1497,7 @@ export default function AdminPanel({
                                   onClick={() =>
                                     setFormData({
                                       ...formData,
-                                      image: LUXURY_BOTTLE_PRESETS[0].url,
+                                      image: "",
                                     })
                                   }
                                   className="p-1 px-2.5 text-[9px] font-mono uppercase tracking-widest text-red-500 border border-red-500/10 hover:border-red-500/30 hover:bg-red-500/5 rounded transition-all cursor-pointer"
@@ -1606,16 +1528,13 @@ export default function AdminPanel({
                               className="w-full bg-zinc-950 border border-zinc-800 rounded p-2.5 pl-3 pr-24 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
                             />
                             {formData.image &&
-                              !formData.image.startsWith("data:image/") &&
-                              !LUXURY_BOTTLE_PRESETS.some(
-                                (p) => p.url === formData.image,
-                              ) && (
+                              !formData.image.startsWith("data:image/") && (
                                 <button
                                   type="button"
                                   onClick={() =>
                                     setFormData({
                                       ...formData,
-                                      image: LUXURY_BOTTLE_PRESETS[0].url,
+                                      image: "",
                                     })
                                   }
                                   className="absolute right-2 top-2 px-2 py-0.5 text-[9px] font-mono bg-zinc-905 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 rounded cursor-pointer"
@@ -1627,10 +1546,7 @@ export default function AdminPanel({
 
                           {/* Live render preview if custom input used */}
                           {formData.image &&
-                            !formData.image.startsWith("data:image/") &&
-                            !LUXURY_BOTTLE_PRESETS.some(
-                              (p) => p.url === formData.image,
-                            ) && (
+                            !formData.image.startsWith("data:image/") && (
                               <div className="p-2 bg-black/40 border border-zinc-900 rounded-md flex items-center gap-3 mt-2 animate-fade-in">
                                 <div className="w-12 h-12 rounded overflow-hidden border border-zinc-800 shrink-0 bg-zinc-900">
                                   <img
@@ -1638,8 +1554,7 @@ export default function AdminPanel({
                                     alt="Custom URL preview"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
-                                      (e.target as HTMLImageElement).src =
-                                        LUXURY_BOTTLE_PRESETS[0].url;
+                                      (e.target as HTMLImageElement).src = "";
                                     }}
                                   />
                                 </div>
@@ -1708,6 +1623,9 @@ export default function AdminPanel({
                             Preço
                           </th>
                           <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                            Estoque
+                          </th>
+                          <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                             Destaque
                           </th>
                           <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-zinc-500 text-right">
@@ -1746,6 +1664,19 @@ export default function AdminPanel({
                               {perfume.price.toLocaleString("pt-BR", {
                                 minimumFractionDigits: 2,
                               })}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                                  perfume.inStock === false
+                                    ? "bg-red-500/10 text-red-300 border border-red-500/20"
+                                    : "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                                }`}
+                              >
+                                {perfume.inStock === false
+                                  ? "Sem Estoque"
+                                  : "Em Estoque"}
+                              </span>
                             </td>
                             <td className="p-4">
                               <button
@@ -1814,6 +1745,13 @@ export default function AdminPanel({
                               <p className="text-[10px] font-mono text-gold-500 uppercase mt-0.5">
                                 {perfume.category} • {perfume.intensity}
                               </p>
+                              <p className="text-[10px] font-mono uppercase tracking-widest mt-1">
+                                {perfume.inStock === false ? (
+                                  <span className="text-red-300">Sem estoque</span>
+                                ) : (
+                                  <span className="text-emerald-300">Em estoque</span>
+                                )}
+                              </p>
                               <p className="text-xs text-zinc-400 font-light mt-1 line-clamp-2">
                                 {perfume.family}
                               </p>
@@ -1840,9 +1778,7 @@ export default function AdminPanel({
                                   : "bg-zinc-800 text-zinc-500 border-transparent hover:border-zinc-700"
                               }`}
                             >
-                              {perfume.isBestSeller
-                                ? "★ Destaque"
-                                : "★ Comum"}
+                              {perfume.isBestSeller ? "★ Destaque" : "★ Comum"}
                             </button>
                           </div>
 

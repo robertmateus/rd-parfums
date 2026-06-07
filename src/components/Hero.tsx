@@ -1,4 +1,4 @@
-import { ArrowDown, Sparkles } from 'lucide-react';
+import { ArrowDown, Sparkles } from "lucide-react";
 
 interface HeroProps {
   onScrollToCatalog: () => void;
@@ -39,18 +39,23 @@ export default function Hero({ onScrollToCatalog }: HeroProps) {
             <path d="M100,5 C120,5 130,22 145,22 C155,22 165,15 185,22 C195,25 198,33 190,40 C175,48 152,40 145,35" />
             <path d="M100,5 C80,5 70,22 55,22 C45,22 35,15 15,22 C5,25 2,33 10,40 C25,48 48,40 55,35" />
             {/* Center crown or fleur-de-lis motif */}
-            <path d="M100,3 C103,15 108,25 118,30 C108,32 100,28 100,42 C100,28 92,32 82,30 C92,25 97,15 100,3 Z" fill="currentColor" fillOpacity="0.2" />
+            <path
+              d="M100,3 C103,15 108,25 118,30 C108,32 100,28 100,42 C100,28 92,32 82,30 C92,25 97,15 100,3 Z"
+              fill="currentColor"
+              fillOpacity="0.2"
+            />
             <circle cx="100" cy="52" r="2.5" fill="currentColor" />
             <path d="M90,52 L110,52" />
             <path d="M80,35 C100,42 100,42 120,35" />
-            <path d="M60,40 C100,55 100,55 140,40" strokeWidth="0.8" strokeDasharray="3 3" />
+            <path
+              d="M60,40 C100,55 100,55 140,40"
+              strokeWidth="0.8"
+              strokeDasharray="3 3"
+            />
           </svg>
         </div>
 
         {/* Small Tagline */}
-        <span className="flex items-center gap-2 font-mono text-[10px] tracking-[0.4em] text-gold-400 uppercase mb-4">
-          <Sparkles className="w-3 h-3 text-gold-400" /> Curadoria RD Parfums
-        </span>
 
         {/* Main Gorgeous Heading */}
         <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl tracking-wide leading-tight bg-gradient-to-b from-white via-gold-200 to-gold-400 bg-clip-text text-transparent px-4">
@@ -66,8 +71,7 @@ export default function Hero({ onScrollToCatalog }: HeroProps) {
 
         {/* Brand Slogan */}
         <p className="font-sans text-sm md:text-lg text-zinc-300 font-light max-w-xl mx-auto leading-relaxed px-4 tracking-wide">
-          Os melhores perfumes, no melhor preço. Uma curadoria exclusiva de
-          fragrâncias que definem presença, poder e sofisticação eterna.
+          Os melhores perfumes, no melhor preço.
         </p>
 
         {/* Rectangular Gold Outline CTA Button */}
@@ -84,10 +88,7 @@ export default function Hero({ onScrollToCatalog }: HeroProps) {
         onClick={onScrollToCatalog}
         className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-pointer opacity-70 hover:opacity-100 transition-opacity z-10"
       >
-        <span className="font-mono text-[9px] tracking-[0.5em] text-zinc-400 uppercase ml-2 animate-pulse">
-          SCROLL
-        </span>
-        <div className="h-10 w-[1px] bg-gradient-to-b from-gold-500 to-transparent relative overflow-hidden">
+        <div className="h-10 w-[0px] bg-gradient-to-b from-gold-800 to-transparent relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gold-300 rounded-full animate-bounce"></div>
         </div>
       </div>
