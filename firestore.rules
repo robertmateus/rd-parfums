@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Administrative user verification
+    function isAdmin() {
+      return isSignedIn() && 
+        request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'contatorobertgomes@gmail.com' ||
+          request.auth.token.email.lower() == 'admin@rdparfums.com'
+        );
+    }
+
+    // Standard type validation for perfume entities
+    function isValidPerfume(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200
+          && data.price is number && data.price >= 0
+          && data.category is string && (data.category == 'MASCULINO' || data.category == 'FEMININO')
+          && data.family is string && data.family.size() <= 200
+          && data.image is string && data.image.size() <= 1000
+          && data.description is string && data.description.size() <= 2000
+          && data.intensity is string && (data.intensity == 'Suave' || data.intensity == 'Moderado' || data.intensity == 'Intenso')
+          && data.topNotes is list && data.topNotes.size() <= 10
+          && data.heartNotes is list && data.heartNotes.size() <= 10
+          && data.baseNotes is list && data.baseNotes.size() <= 10
+          && data.volumeAvailable is list && data.volumeAvailable.size() <= 10;
+    }
+
+    // Rules for perfumes path
+    match /perfumes/{perfumeId} {
+      // Catalog browsing is fully public (anyone can view products)
+      allow read, get, list: if true;
+      
+      // Catalog updates and deletions are restricted exclusively to administrators
+      allow create: if isAdmin() && isValidPerfume(request.resource.data);
+      allow update: if isAdmin() && isValidPerfume(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

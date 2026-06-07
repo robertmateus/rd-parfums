@@ -1,0 +1,6 @@
+{
+  "name": "RD Parfums",
+  "description": "Catálogo responsivo de perfumes de nicho de altíssimo luxo com filtros inteligentes, assistente de fragrância interativo e orçamentos via WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

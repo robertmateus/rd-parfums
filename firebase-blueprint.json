@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "Perfume": {
+      "title": "Perfume",
+      "description": "Definition of a luxury perfume product profile in the catalog.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the fragrance"
+        },
+        "price": {
+          "type": "number",
+          "description": "Retail price in BRL"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["MASCULINO", "FEMININO"],
+          "description": "Target fragrance category"
+        },
+        "family": {
+          "type": "string",
+          "description": "Olfactory family, e.g., 'Floral • Amadeirado'"
+        },
+        "image": {
+          "type": "string",
+          "description": "Source image URL or local asset path"
+        },
+        "description": {
+          "type": "string",
+          "description": "Aura and sensory description"
+        },
+        "intensity": {
+          "type": "string",
+          "enum": ["Suave", "Moderado", "Intenso"],
+          "description": "Sillage intensity descriptor"
+        },
+        "topNotes": {
+          "type": "array",
+          "description": "Notes smelled immediately upon application"
+        },
+        "heartNotes": {
+          "type": "array",
+          "description": "Notes emerging as top notes dissipate"
+        },
+        "baseNotes": {
+          "type": "array",
+          "description": "The foundation and lingering notes of the scent"
+        },
+        "volumeAvailable": {
+          "type": "array",
+          "description": "List of available volume options, e.g., ['50ml', '100ml']"
+        },
+        "isBestSeller": {
+          "type": "boolean",
+          "description": "Whether the perfume is a marked best-seller"
+        }
+      },
+      "required": ["name", "price", "category", "family", "image", "description", "intensity", "topNotes", "heartNotes", "baseNotes", "volumeAvailable"]
+    }
+  },
+  "firestore": {
+    "/perfumes/{perfumeId}": {
+      "schema": "Perfume",
+      "description": "Store all available luxury perfumes in the catalog."
+    }
+  }
+}
