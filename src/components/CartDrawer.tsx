@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CartItem } from "../types";
+import { CartItem, Coupon } from "../types";
 import {
   X,
   Trash2,
@@ -8,7 +8,11 @@ import {
   Minus,
   Inbox,
   Sparkles,
+  Ticket,
+  Check,
+  AlertCircle,
 } from "lucide-react";
+import * as perfumeService from "../data/perfumeService";
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -28,6 +32,10 @@ export default function CartDrawer({
   const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Standard static price from catalog
   const getItemPrice = (item: CartItem): number => {
@@ -41,8 +49,59 @@ export default function CartDrawer({
     );
   };
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Digite um cupom");
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError("");
+    
+    try {
+      const result = await perfumeService.validateAndApplyCoupon(
+        couponCode,
+        userPhone.replace(/\D/g, ""),
+        getSubtotal()
+      );
+
+      if (result.isValid && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        setCouponError("");
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(result.error || "Cupom inválido");
+      }
+    } catch (error) {
+      setCouponError("Erro ao validar cupom");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
+  const getDiscountAmount = (): number => {
+    if (!appliedCoupon) return 0;
+    const subtotal = getSubtotal();
+    if (appliedCoupon.discountType === 'fixed') {
+      return Math.min(appliedCoupon.discountValue, subtotal);
+    } else {
+      return (subtotal * appliedCoupon.discountValue) / 100;
+    }
+  };
+
+  const getTotal = (): number => {
+    return Math.max(0, getSubtotal() - getDiscountAmount());
+  };
+
   // Generate customized elegant whatsapp link message with direct contact link for helper
-  const triggerWhatsApp = () => {
+  const triggerWhatsApp = async () => {
     if (!userName.trim()) {
       setPhoneError("Por favor, informe seu nome.");
       return;
@@ -51,6 +110,20 @@ export default function CartDrawer({
     if (cleanPhone.length < 10) {
       setPhoneError("Por favor, insira o seu WhatsApp (com DDD).");
       return;
+    }
+
+    // Se cupom foi aplicado, registrar uso
+    if (appliedCoupon) {
+      try {
+        await perfumeService.recordCouponUsage(
+          appliedCoupon.id,
+          cleanPhone,
+          getDiscountAmount(),
+          getSubtotal()
+        );
+      } catch (error) {
+        console.warn("Erro ao registrar uso do cupom:", error);
+      }
     }
 
     const phoneNumber = "5541999178435"; // RD Parfums boutique owner / seller representative
@@ -68,7 +141,16 @@ export default function CartDrawer({
       message += `   • Total deste Item: R$ ${(price * item.quantity).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
     });
 
-    message += `\n💰 *Total Geral:* R$ ${getSubtotal().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n`;
+    message += `\n💰 *Subtotal:* R$ ${getSubtotal().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
+    
+    if (appliedCoupon) {
+      message += `🎟️ *Cupom Aplicado:* ${appliedCoupon.code}\n`;
+      message += `💝 *Desconto:* -R$ ${getDiscountAmount().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n`;
+      message += `\n💰 *TOTAL COM DESCONTO:* R$ ${getTotal().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n`;
+    } else {
+      message += `\n💰 *TOTAL:* R$ ${getSubtotal().toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\n`;
+    }
+
     message += "_Mensagem automática enviada a partir do Catálogo RD Parfums._";
 
     const encoded = encodeURIComponent(message);
@@ -249,16 +331,110 @@ export default function CartDrawer({
               </div>
             </div>
 
-            <div className="flex justify-between items-baseline pt-2">
-              <span className="font-sans text-xs tracking-wider text-zinc-400 uppercase">
-                Subtotal Estimado:
+            {/* Coupon Section */}
+            <div className="space-y-2 bg-black/40 p-4 border border-zinc-800/60 rounded-sm">
+              <span className="font-mono text-[9px] tracking-[0.2em] text-gold-400 uppercase font-semibold flex items-center gap-1">
+                <Ticket className="w-3 h-3" />
+                Cupom de Desconto
               </span>
-              <span className="font-mono text-xl font-bold text-gold-300">
-                R${" "}
-                {getSubtotal().toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                })}
-              </span>
+              
+              {appliedCoupon ? (
+                <div className="bg-gold-500/10 border border-gold-500/30 rounded-sm p-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="font-mono text-xs text-white font-semibold">
+                          {appliedCoupon.code}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gold-300 mt-1">
+                        {appliedCoupon.name}
+                      </p>
+                    </div>
+                    <button
+                      onClick={removeCoupon}
+                      className="text-zinc-500 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="Código do cupom"
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value.toUpperCase());
+                      if (couponError) setCouponError("");
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && applyCoupon()}
+                    disabled={couponLoading}
+                    className={`flex-1 bg-luxury-950 border ${
+                      couponError
+                        ? "border-red-500/50"
+                        : "border-zinc-800/80 focus:border-gold-500/70"
+                    } p-2.5 rounded-sm text-xs text-white placeholder-zinc-600 outline-none transition-colors disabled:opacity-50`}
+                  />
+                  <button
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-3 bg-gold-500 hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed text-luxury-950 text-xs font-bold rounded-sm transition-all cursor-pointer"
+                  >
+                    {couponLoading ? "..." : "OK"}
+                  </button>
+                </div>
+              )}
+              
+              {couponError && (
+                <div className="flex items-start gap-1.5 text-[10px] text-red-400 mt-2">
+                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  <span>{couponError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Price Summary */}
+            <div className="space-y-2 pt-2 border-t border-zinc-800/50">
+              <div className="flex justify-between items-baseline">
+                <span className="font-sans text-xs tracking-wider text-zinc-400 uppercase">
+                  Subtotal:
+                </span>
+                <span className="font-mono text-sm text-gold-300">
+                  R${" "}
+                  {getSubtotal().toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              
+              {appliedCoupon && getDiscountAmount() > 0 && (
+                <div className="flex justify-between items-baseline text-green-400">
+                  <span className="font-sans text-xs tracking-wider uppercase">
+                    Desconto ({appliedCoupon.discountType === 'percentage' ? `${appliedCoupon.discountValue}%` : 'Cupom'}):
+                  </span>
+                  <span className="font-mono text-sm">
+                    -R${" "}
+                    {getDiscountAmount().toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-baseline pt-2 border-t border-zinc-800/30">
+                <span className="font-sans text-xs tracking-wider text-white uppercase font-semibold">
+                  Total:
+                </span>
+                <span className="font-mono text-xl font-bold text-gold-300">
+                  R${" "}
+                  {getTotal().toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
             </div>
 
             <button

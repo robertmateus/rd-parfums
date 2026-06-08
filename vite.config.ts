@@ -4,12 +4,30 @@ import path from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig(() => {
+  // For Vercel deployment, use root path; for GitHub Pages, use /rd-parfums/
+  const isVercel = process.env.VERCEL === "1";
+  const base = isVercel ? "/" : "/rd-parfums/";
+
   return {
-    base: "/rd-parfums/", // 👈 ADICIONADO AQUI: Essencial para o GitHub Pages achar os assets (.js, .css)
+    base: base,
     plugins: [react(), tailwindcss()],
-    rresolve: {
+    resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    build: {
+      // Optimize for production
+      minify: "terser" as const,
+      sourcemap: process.env.NODE_ENV === "development", // Source maps only in dev
+      rollupOptions: {
+        output: {
+          // Split chunks for better caching
+          manualChunks: {
+            firebase: ["firebase/app", "firebase/auth", "firebase/firestore"],
+            react: ["react", "react-dom"],
+          },
+        },
       },
     },
     server: {
@@ -18,6 +36,10 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== "true",
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === "true" ? null : {},
+    },
+    define: {
+      // Prevent exposing sensitive info in client bundles
+      __SENTRY_DEBUG__: false,
     },
   };
 });

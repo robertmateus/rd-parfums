@@ -46,5 +46,48 @@ service cloud.firestore {
       allow update: if isAdmin() && isValidPerfume(request.resource.data);
       allow delete: if isAdmin();
     }
+
+    // ============ COUPON RULES ============
+    
+    // Validate coupon structure
+    function isValidCoupon(data) {
+      return data.code is string && data.code.size() > 0 && data.code.size() <= 50
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.discountType is string && (data.discountType == 'fixed' || data.discountType == 'percentage')
+          && data.discountValue is number && data.discountValue > 0
+          && data.maxUses is number && data.maxUses > 0
+          && data.usesPerPerson is number && data.usesPerPerson > 0
+          && data.currentUses is number && data.currentUses >= 0
+          && data.validFrom is string
+          && data.validUntil is string
+          && data.isActive is bool;
+    }
+
+    // Coupons collection - admin only for write, public read
+    match /coupons/{couponId} {
+      // Guests can read active coupons (to validate)
+      allow read: if resource.data.isActive == true;
+      
+      // Only admins can create, update, delete
+      allow create: if isAdmin() && isValidCoupon(request.resource.data);
+      allow update: if isAdmin() && isValidCoupon(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Coupon usage tracking - write only, admin can read
+    match /coupon_usage/{usageId} {
+      // Only admins can read usage history
+      allow read: if isAdmin();
+      
+      // Anyone can record a coupon usage (will be validated by backend)
+      allow create: if request.resource.data.couponId is string
+                     && request.resource.data.whatsappNumber is string
+                     && request.resource.data.discountApplied is number
+                     && request.resource.data.orderTotal is number
+                     && request.resource.data.usedAt is string;
+      
+      allow update, delete: if isAdmin();
+    }
   }
 }
+

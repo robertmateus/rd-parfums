@@ -10,6 +10,7 @@ import {
   AlertCircle,
   LogOut,
   FileText,
+  Ticket,
   CheckCircle2,
   ShieldCheck,
   Clock,
@@ -24,6 +25,7 @@ import {
 import { Perfume } from "../types";
 import * as perfumeService from "../data/perfumeService";
 import { isConfigured, auth } from "../data/firebase";
+import CouponManager from "./CouponManager";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -46,21 +48,6 @@ export default function AdminPanel({
   onCatalogChanged,
   perfumesList,
 }: AdminPanelProps) {
-  // Lightweight runtime diagnostics to help trace freezes in the admin modal
-  useEffect(() => {
-    console.debug("AdminPanel mounted", { isOpen });
-    return () => console.debug("AdminPanel unmounted");
-  }, []);
-
-  useEffect(() => {
-    console.debug("AdminPanel render state", {
-      isOpen,
-      isAuthenticated,
-      isEditing,
-      editingId,
-      activeImageTab,
-    });
-  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [emailLogin, setEmailLogin] = useState("");
   const [passwordLogin, setPasswordLogin] = useState("");
@@ -81,6 +68,7 @@ export default function AdminPanel({
   // Post-auth security logs view toggle
   const [showSecurityLogs, setShowSecurityLogs] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [showCoupons, setShowCoupons] = useState(false);
 
   // CRUD states
   const [isEditing, setIsEditing] = useState(false);
@@ -103,9 +91,8 @@ export default function AdminPanel({
     inStock: true,
   });
 
-  const [activeImageTab, setActiveImageTab] = useState<"upload" | "url">(
-    "upload",
-  );
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [priceInput, setPriceInput] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -118,22 +105,26 @@ export default function AdminPanel({
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      compressAndAddToGallery(e.target.files[0]);
+    }
+  };
+
+  const handleGalleryDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      compressAndSetImage(e.dataTransfer.files[0]);
+      compressAndAddToGallery(e.dataTransfer.files[0]);
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      compressAndSetImage(e.target.files[0]);
+  const compressAndAddToGallery = (file: File) => {
+    if (galleryImages.length >= 5) {
+      showNotification("Máximo de 5 imagens permitido!", "error");
+      return;
     }
-  };
 
-  const compressAndSetImage = (file: File) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new window.Image();
@@ -142,7 +133,6 @@ export default function AdminPanel({
         let width = img.width;
         let height = img.height;
 
-        // Redimensiona para max 600px para economizar banda e armazenamento no Firestore / LocalStorage
         const MAX_DIM = 600;
         if (width > MAX_DIM || height > MAX_DIM) {
           if (width > height) {
@@ -160,9 +150,9 @@ export default function AdminPanel({
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
-          setFormData((prev) => ({ ...prev, image: compressedBase64 }));
+          setGalleryImages([...galleryImages, compressedBase64]);
           showNotification(
-            "Imagem personalizada importada e otimizada com sucesso!",
+            `Foto ${galleryImages.length + 1}/5 adicionada à galeria!`,
             "success",
           );
         }
@@ -172,12 +162,15 @@ export default function AdminPanel({
     reader.readAsDataURL(file);
   };
 
+  const removeGalleryImage = (index: number) => {
+    setGalleryImages(galleryImages.filter((_, i) => i !== index));
+  };
+
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
 
-  // Custom premium modal confirmation state
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -188,7 +181,6 @@ export default function AdminPanel({
     isDestructive?: boolean;
   } | null>(null);
 
-  // Debug panel toggle for non-dev users to view stored diagnostics
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const showConfirm = (options: {
@@ -205,7 +197,6 @@ export default function AdminPanel({
     });
   };
 
-  // Load audit logs and persistent lockout on mount (robust parsing)
   useEffect(() => {
     const savedLogs = localStorage.getItem("rd_parfums_audit_logs");
     if (savedLogs) {
@@ -219,7 +210,6 @@ export default function AdminPanel({
       }
     }
 
-    // Load active lockout state if exists
     const savedLockout = localStorage.getItem("rd_admin_lockout_until");
     if (savedLockout) {
       const epoch = Number(savedLockout);
@@ -229,10 +219,8 @@ export default function AdminPanel({
     }
   }, []);
 
-  // Synchronize authentication state directly with Firebase Auth listener
   useEffect(() => {
     if (!isConfigured || !auth) {
-      // Fallback: verificar se há sessão no sessionStorage (para manter usuário autenticado mesmo sem Firebase)
       const savedAuth = sessionStorage.getItem("rd_admin_auth");
       if (savedAuth === "true") {
         setIsAuthenticated(true);
@@ -249,7 +237,6 @@ export default function AdminPanel({
         if (authorizedEmails.includes(user.email.toLowerCase())) {
           setIsAuthenticated(true);
           sessionStorage.setItem("rd_admin_auth", "true");
-          // Trigger catalog reload. If database is brand new, this will trigger secure initial seeding!
           setTimeout(() => {
             onCatalogChanged();
           }, 100);
@@ -258,7 +245,6 @@ export default function AdminPanel({
           sessionStorage.removeItem("rd_admin_auth");
         }
       } else {
-        // Fallback: se Firebase desconectar, verificar sessionStorage
         const savedAuth = sessionStorage.getItem("rd_admin_auth");
         if (savedAuth === "true") {
           setIsAuthenticated(true);
@@ -272,7 +258,6 @@ export default function AdminPanel({
     return () => unsubscribe();
   }, []);
 
-  // Countdown timer for security lockout
   useEffect(() => {
     if (!lockoutUntil) return;
 
@@ -299,7 +284,6 @@ export default function AdminPanel({
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Helper to record professional cryptographically signed security audit logs
   const addAuditLog = (action: string, details: string) => {
     const operator = auth?.currentUser?.email || emailLogin || "Operador Local";
     const newLog = {
@@ -308,7 +292,7 @@ export default function AdminPanel({
       operator,
       action,
       details,
-      ipAddress: "186.220.35." + Math.floor(Math.random() * 254 + 1), // Simulated auditing network address
+      ipAddress: "186.220.35." + Math.floor(Math.random() * 254 + 1),
       device: navigator.userAgent.substring(0, 40) + "...",
     };
 
@@ -320,14 +304,12 @@ export default function AdminPanel({
     setAuditLogs(updated);
   };
 
-  // Keep session alive checker to monitor activity logs
   const keepSessionAlive = () => {
     if (isAuthenticated) {
       sessionStorage.setItem("rd_admin_last_active", Date.now().toString());
     }
   };
 
-  // 15 Minutes inactivity auto-timeout loop (DESATIVADO - permitir sessão permanente)
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -339,38 +321,17 @@ export default function AdminPanel({
     window.addEventListener("keydown", handleInteraction);
     window.addEventListener("click", handleInteraction);
 
-    // Comentado: logout automático por inatividade
-    // const interval = setInterval(() => {
-    //   const lastActive = Number(
-    //     sessionStorage.getItem("rd_admin_last_active") || "0",
-    //   );
-    //   const elapsed = Date.now() - lastActive;
-    //   if (elapsed > 15 * 60 * 1000) {
-    //     handleLogout();
-    //     showConfirm({
-    //       title: "Sessão Encerrada",
-    //       message:
-    //         "Sessão administrativa encerrada automaticamente por inatividade de 15 minutos (Mecanismo de Proteção RD Parfums).",
-    //       confirmText: "Entendido",
-    //       onConfirm: () => {},
-    //     });
-    //   }
-    // }, 10000);
-
     return () => {
       window.removeEventListener("mousemove", handleInteraction);
       window.removeEventListener("keydown", handleInteraction);
       window.removeEventListener("click", handleInteraction);
-      // clearInterval(interval);
     };
   }, [isAuthenticated]);
 
-  // Primary Login submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
 
-    // Bruteforce lock check
     if (lockoutUntil && lockoutUntil > Date.now()) {
       setAuthError(
         `Acesso bloqueado por segurança. Aguarde ${lockoutTimeRemaining} segundos.`,
@@ -411,7 +372,7 @@ export default function AdminPanel({
       );
 
       if (nextFail >= 5) {
-        const lockoutEpoch = Date.now() + 5 * 60 * 1000; // 5 mins
+        const lockoutEpoch = Date.now() + 5 * 60 * 1000;
         setLockoutUntil(lockoutEpoch);
         localStorage.setItem("rd_admin_lockout_until", lockoutEpoch.toString());
         setAuthError(
@@ -425,7 +386,6 @@ export default function AdminPanel({
     }
   };
 
-  // Admin New Account Sign up (Self-registration of admin accounts)
   const handleRegisterAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
@@ -458,7 +418,6 @@ export default function AdminPanel({
       );
       const user = userCredential.user;
 
-      // Send genuine sign up verification link from Firebase Auth
       await sendEmailVerification(user);
 
       showNotification(
@@ -502,11 +461,10 @@ export default function AdminPanel({
     onClose();
   };
 
-  // Pre-fill form for adding or editing
   const openAddForm = () => {
     setIsEditing(true);
     setEditingId(null);
-    setActiveImageTab("upload");
+    setGalleryImages([]);
     setFormData({
       name: "",
       price: 650,
@@ -522,19 +480,13 @@ export default function AdminPanel({
       isBestSeller: false,
       inStock: true,
     });
+    setPriceInput(String(650).replace(".", ","));
   };
 
   const openEditForm = (perfume: Perfume) => {
     setIsEditing(true);
     setEditingId(perfume.id);
-
-    // Auto detect active image tab based on current value
-    if (perfume.image && perfume.image.startsWith("data:image/")) {
-      setActiveImageTab("upload");
-    } else {
-      setActiveImageTab("url");
-    }
-
+    setGalleryImages(perfume.images || []);
     setFormData({
       name: perfume.name,
       price: perfume.price,
@@ -550,6 +502,7 @@ export default function AdminPanel({
       isBestSeller: !!perfume.isBestSeller,
       inStock: perfume.inStock !== false,
     });
+    setPriceInput(String(perfume.price).replace(".", ","));
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -660,10 +613,11 @@ export default function AdminPanel({
     if (
       !formData.name.trim() ||
       !formData.description.trim() ||
-      formData.price <= 0
+      formData.price <= 0 ||
+      galleryImages.length === 0
     ) {
       showNotification(
-        "Por favor, preencha todos os campos obrigatórios corretamente.",
+        "Por favor, preencha todos os campos obrigatórios e adicione pelo menos uma foto.",
         "error",
       );
       return;
@@ -675,7 +629,8 @@ export default function AdminPanel({
       category: formData.category,
       family: formData.family.trim() || "Exclusivo • Sofisticado",
       intensity: formData.intensity,
-      image: formData.image,
+      image: galleryImages[0],
+      images: galleryImages.length > 0 ? galleryImages : undefined,
       description: formData.description.trim(),
       topNotes: formData.topNotesText
         .split(",")
@@ -699,7 +654,6 @@ export default function AdminPanel({
 
     try {
       if (editingId) {
-        // Edit existing
         await perfumeService.editPerfume(editingId, payload);
         addAuditLog(
           "CATALOG_ITEM_UPDATED",
@@ -707,7 +661,6 @@ export default function AdminPanel({
         );
         showNotification(`"${payload.name}" atualizado com sucesso.`);
       } else {
-        // Create new
         await perfumeService.addPerfume(payload);
         addAuditLog(
           "CATALOG_ITEM_CREATED",
@@ -746,9 +699,9 @@ export default function AdminPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 overflow-y-auto flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 overflow-y-auto flex items-start justify-center p-4 md:items-center">
       {/* Container Card */}
-      <div className="w-full max-w-4xl bg-[#09090b] border border-gold-950/30 rounded-xl overflow-hidden shadow-2xl relative my-8">
+      <div className="w-full max-w-4xl bg-[#09090b] border border-gold-950/30 rounded-xl overflow-hidden shadow-2xl relative my-8 md:my-0">
         {/* Modal Header */}
         <div className="p-6 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
           <div className="flex items-center gap-3">
@@ -873,7 +826,6 @@ export default function AdminPanel({
 
         {!isAuthenticated ? (
           <div className="p-8 max-w-lg mx-auto py-12">
-            {/* Brute force countdown header alert */}
             {lockoutUntil && lockoutUntil > Date.now() && (
               <div className="mb-6 p-4 bg-red-950/20 border border-red-900/40 text-red-400 rounded-lg text-xs space-y-1">
                 <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-red-400">
@@ -894,7 +846,6 @@ export default function AdminPanel({
               </div>
             )}
 
-            {/* --- STANDARD LOGIN --- */}
             <div className="space-y-6">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="text-center mb-6">
@@ -967,8 +918,7 @@ export default function AdminPanel({
             </div>
           </div>
         ) : (
-          /* --- STAGE 2: SECURE CONSOLE --- */
-          <div className="p-6">
+          <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto md:max-h-none md:overflow-y-visible">
             {/* Top Command Bar */}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-6 bg-zinc-950 p-4 border border-zinc-900 rounded-lg">
               <div className="flex items-center gap-2 min-w-0">
@@ -1004,6 +954,24 @@ export default function AdminPanel({
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    setShowCoupons((s) => !s);
+                    setShowSecurityLogs(false);
+                    setIsEditing(false);
+                  }}
+                  className={`px-3 sm:px-3.5 py-2 rounded text-xs font-mono uppercase flex items-center justify-center sm:justify-start gap-1.5 transition-all border ${
+                    showCoupons
+                      ? "bg-gold-500/10 text-gold-400 border-gold-500/30 font-semibold"
+                      : "hover:bg-zinc-900 text-zinc-400 hover:text-white border-zinc-800"
+                  }`}
+                  title="Gerenciar cupons"
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Cupons</span>
+                  <span className="sm:hidden">Cupons</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowSecurityLogs(!showSecurityLogs)}
                   className={`px-3 sm:px-3.5 py-2 rounded text-xs font-mono uppercase flex items-center justify-center sm:justify-start gap-1.5 transition-all border ${
                     showSecurityLogs
@@ -1030,9 +998,7 @@ export default function AdminPanel({
               </div>
             </div>
 
-            {/* Content view toggled between: Security Audit Logs, Form Edit, or Products Catalogue View */}
             {showSecurityLogs ? (
-              /* SECURITY AUDIT LEDGER VIEW */
               <div className="space-y-4 animate-fade-in bg-zinc-950/20 border border-zinc-900 p-6 rounded-lg">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-zinc-950 p-4 border border-zinc-900 rounded-lg">
                   <div>
@@ -1143,8 +1109,11 @@ export default function AdminPanel({
                   </table>
                 </div>
               </div>
+            ) : showCoupons ? (
+              <div className="space-y-4 animate-fade-in">
+                <CouponManager />
+              </div>
             ) : isEditing ? (
-              /* PANEL FORM VIEW */
               <form
                 onSubmit={handleSave}
                 className="space-y-6 bg-zinc-950/40 border border-zinc-900 p-6 rounded-lg animate-fade-in"
@@ -1164,9 +1133,8 @@ export default function AdminPanel({
                   </button>
                 </div>
 
-                {/* Form fields layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column */}
+                  {/* Coluna Esquerda */}
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 block mb-1">
@@ -1190,18 +1158,22 @@ export default function AdminPanel({
                           Preço Sugerido (R$) *
                         </label>
                         <input
-                          type="number"
-                          value={formData.price || ""}
-                          onChange={(e) =>
+                          type="text"
+                          inputMode="decimal"
+                          value={priceInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\s+/g, "");
+                            setPriceInput(raw);
+                            const parsed = parseFloat(raw.replace(",", "."));
                             setFormData({
                               ...formData,
-                              price: Number(e.target.value),
-                            })
-                          }
-                          placeholder="Ex: 850"
+                              price: isNaN(parsed) ? 0 : parsed,
+                            });
+                          }}
+                          placeholder="Ex: 850,00"
                           className="w-full bg-zinc-950 border border-zinc-800 rounded p-2.5 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
                           required
-                          min="1"
+                          min="0"
                         />
                       </div>
                       <div>
@@ -1318,7 +1290,7 @@ export default function AdminPanel({
                     </div>
                   </div>
 
-                  {/* Right Column */}
+                  {/* Coluna Direita */}
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 block mb-1">
@@ -1339,7 +1311,6 @@ export default function AdminPanel({
                       />
                     </div>
 
-                    {/* Pyramid / Olfactory notes */}
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 block mb-1">
@@ -1355,7 +1326,7 @@ export default function AdminPanel({
                             })
                           }
                           placeholder="Ex: Bergamota, Sálvia"
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500 animate-slide-in"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
                         />
                       </div>
                       <div>
@@ -1372,7 +1343,7 @@ export default function AdminPanel({
                             })
                           }
                           placeholder="Ex: Jasmim, Pimenta"
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500 animate-slide-in"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
                         />
                       </div>
                       <div>
@@ -1389,59 +1360,31 @@ export default function AdminPanel({
                             })
                           }
                           placeholder="Ex: Baunilha, Sândalo"
-                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500 animate-slide-in"
+                          className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-[11px] text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
                         />
                       </div>
                     </div>
 
-                    {/* Elegant Image Manager Panel */}
+                    {/* Galeria de Fotos */}
                     <div className="border border-zinc-900 rounded-lg p-3 bg-zinc-950/60">
-                      <div className="flex items-center justify-between mb-3 border-b border-zinc-900/60 pb-2">
-                        <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 block font-semibold">
-                          Imagem e Visual do Frasco *
-                        </label>
-                        <span className="text-[10px] font-mono text-gold-500">
-                          Formato Recomendado: Quadrado
-                        </span>
-                      </div>
+                      <div>
+                        <div className="mb-3">
+                          <label className="text-[10px] font-mono text-gold-400 uppercase tracking-wider block mb-2">
+                            📸 Galeria de Fotos do Produto (até 5 imagens) *
+                          </label>
+                          <span className="text-[9px] text-zinc-500">
+                            Adicione múltiplas fotos para exibir na página do
+                            produto. A primeira será usada como capa.
+                          </span>
+                        </div>
 
-                      {/* Tab selection buttons */}
-                      <div className="flex gap-1.5 mb-3 bg-black/40 p-1 rounded-md border border-zinc-900">
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageTab("upload")}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[10px] font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
-                            activeImageTab === "upload"
-                              ? "bg-gold-500/10 text-gold-400 border border-gold-400/20 shadow-sm"
-                              : "text-zinc-500 hover:text-zinc-300 border border-transparent"
-                          }`}
-                        >
-                          <Upload className="w-3 h-3" />
-                          Enviar do Computador
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setActiveImageTab("url")}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[10px] font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
-                            activeImageTab === "url"
-                              ? "bg-gold-500/10 text-gold-400 border border-gold-400/20 shadow-sm"
-                              : "text-zinc-500 hover:text-zinc-300 border border-transparent"
-                          }`}
-                        >
-                          <Link className="w-3 h-3" />
-                          Endereço URL
-                        </button>
-                      </div>
-
-                      {activeImageTab === "upload" && (
-                        <div className="space-y-3">
+                        {galleryImages.length < 5 && (
                           <div
                             onDragEnter={handleDrag}
                             onDragOver={handleDrag}
                             onDragLeave={handleDrag}
-                            onDrop={handleDrop}
-                            className={`border-2 border-dashed rounded-lg p-5 flex flex-col items-center justify-center transition-all ${
+                            onDrop={handleGalleryDrop}
+                            className={`border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center transition-all mb-3 ${
                               dragActive
                                 ? "border-gold-400 bg-gold-500/5"
                                 : "border-zinc-800 bg-black/20 hover:bg-black/30 hover:border-zinc-700"
@@ -1449,132 +1392,64 @@ export default function AdminPanel({
                           >
                             <input
                               type="file"
-                              id="perfume-image-upload"
+                              id="perfume-gallery-upload"
                               accept="image/*"
-                              onChange={handleFileChange}
+                              onChange={handleGalleryFileChange}
                               className="hidden"
                             />
                             <label
-                              htmlFor="perfume-image-upload"
+                              htmlFor="perfume-gallery-upload"
                               className="flex flex-col items-center cursor-pointer w-full text-center"
                             >
-                              <div className="p-2.5 rounded-full bg-zinc-900 border border-zinc-800 mb-2 hover:scale-105 transition-transform">
+                              <div className="p-2 rounded-full bg-zinc-900 border border-zinc-800 mb-2 hover:scale-105 transition-transform">
                                 <Upload className="w-4 h-4 text-gold-400" />
                               </div>
                               <span className="text-xs text-zinc-300 font-medium">
-                                Arraste & solte sua imagem de perfume aqui
-                              </span>
-                              <span className="text-[10px] text-zinc-500 mt-1">
-                                ou clique para buscar no seu dispositivo
-                              </span>
-                              <span className="text-[9px] font-mono text-zinc-650 mt-1 uppercase tracking-wider">
-                                PNG, JPG ou WEBP (Otimizado via canvas)
+                                Arraste ou clique para adicionar fotos (
+                                {galleryImages.length}/5)
                               </span>
                             </label>
                           </div>
+                        )}
 
-                          {/* Preview box if Base64 uploaded */}
-                          {formData.image &&
-                            formData.image.startsWith("data:image/") && (
-                              <div className="p-2 bg-black/40 border border-zinc-900 rounded-md flex items-center gap-3 animate-fade-in">
-                                <div className="w-12 h-12 rounded overflow-hidden border border-zinc-800 shrink-0 bg-zinc-900">
-                                  <img
-                                    src={formData.image}
-                                    alt="Upload Preview"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0 pr-2">
-                                  <span className="text-[10px] font-mono text-gold-400 uppercase tracking-wide block">
-                                    Imagem Carregada
-                                  </span>
-                                  <span className="text-[9px] text-zinc-500 block truncate">
-                                    Frasco customizado codificado localmente
-                                  </span>
-                                </div>
+                        {galleryImages.length > 0 && (
+                          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {galleryImages.map((img, index) => (
+                              <div
+                                key={index}
+                                className="relative group rounded border border-zinc-800 overflow-hidden bg-zinc-900 aspect-square"
+                              >
+                                <img
+                                  src={img}
+                                  alt={`Galeria ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    setFormData({
-                                      ...formData,
-                                      image: "",
-                                    })
-                                  }
-                                  className="p-1 px-2.5 text-[9px] font-mono uppercase tracking-widest text-red-500 border border-red-500/10 hover:border-red-500/30 hover:bg-red-500/5 rounded transition-all cursor-pointer"
+                                  onClick={() => removeGalleryImage(index)}
+                                  className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                 >
-                                  Limpar
+                                  <X className="w-5 h-5 text-red-400" />
                                 </button>
+                                <span className="absolute bottom-1 right-1 text-[9px] font-mono bg-black/80 text-gold-400 px-1.5 py-0.5 rounded">
+                                  {index + 1}
+                                </span>
                               </div>
-                            )}
-                        </div>
-                      )}
-
-                      {activeImageTab === "url" && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-mono text-zinc-550 block">
-                            Insira um endereço URL direto de imagem na internet:
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="url"
-                              value={formData.image}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  image: e.target.value,
-                                })
-                              }
-                              placeholder="https://exemplo.com/frasco.jpg"
-                              className="w-full bg-zinc-950 border border-zinc-800 rounded p-2.5 pl-3 pr-24 text-xs text-white placeholder-zinc-750 focus:outline-none focus:border-gold-500"
-                            />
-                            {formData.image &&
-                              !formData.image.startsWith("data:image/") && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setFormData({
-                                      ...formData,
-                                      image: "",
-                                    })
-                                  }
-                                  className="absolute right-2 top-2 px-2 py-0.5 text-[9px] font-mono bg-zinc-905 hover:bg-zinc-800 text-zinc-400 border border-zinc-800 rounded cursor-pointer"
-                                >
-                                  Limpar
-                                </button>
-                              )}
+                            ))}
                           </div>
+                        )}
 
-                          {/* Live render preview if custom input used */}
-                          {formData.image &&
-                            !formData.image.startsWith("data:image/") && (
-                              <div className="p-2 bg-black/40 border border-zinc-900 rounded-md flex items-center gap-3 mt-2 animate-fade-in">
-                                <div className="w-12 h-12 rounded overflow-hidden border border-zinc-800 shrink-0 bg-zinc-900">
-                                  <img
-                                    src={formData.image}
-                                    alt="Custom URL preview"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = "";
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0 pr-2">
-                                  <span className="text-[10px] font-mono text-gold-400 uppercase tracking-wide block">
-                                    URL Personalizada de Imagem
-                                  </span>
-                                  <span className="text-[9px] text-zinc-500 block truncate leading-tight">
-                                    {formData.image}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                        </div>
-                      )}
+                        {galleryImages.length === 0 && (
+                          <div className="p-3 text-center bg-black/40 border border-zinc-900 rounded text-xs text-zinc-500">
+                            Nenhuma foto adicionada ainda. Arraste imagens acima
+                            para criar uma galeria.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Form Buttons */}
                 <div className="flex justify-end gap-3 pt-4 border-t border-zinc-900 mt-4">
                   <button
                     type="button"
@@ -1592,7 +1467,7 @@ export default function AdminPanel({
                 </div>
               </form>
             ) : (
-              /* PRODUCTS TABLE VIEW */
+              /* TABELA DE PRODUTOS */
               <div className="space-y-4">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs font-mono text-zinc-400">
@@ -1605,7 +1480,7 @@ export default function AdminPanel({
                 </div>
 
                 <div className="border border-zinc-900 rounded-lg overflow-hidden bg-zinc-950/20">
-                  {/* Desktop Table View */}
+                  {/* Visão Desktop */}
                   <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
@@ -1718,7 +1593,7 @@ export default function AdminPanel({
                     </table>
                   </div>
 
-                  {/* Mobile Card View */}
+                  {/* Visão Mobile */}
                   <div className="md:hidden space-y-3 p-4">
                     {perfumesList.length === 0 ? (
                       <div className="p-8 text-center text-xs text-zinc-500">
@@ -1747,9 +1622,13 @@ export default function AdminPanel({
                               </p>
                               <p className="text-[10px] font-mono uppercase tracking-widest mt-1">
                                 {perfume.inStock === false ? (
-                                  <span className="text-red-300">Sem estoque</span>
+                                  <span className="text-red-300">
+                                    Sem estoque
+                                  </span>
                                 ) : (
-                                  <span className="text-emerald-300">Em estoque</span>
+                                  <span className="text-emerald-300">
+                                    Em estoque
+                                  </span>
                                 )}
                               </p>
                               <p className="text-xs text-zinc-400 font-light mt-1 line-clamp-2">
@@ -1818,11 +1697,10 @@ export default function AdminPanel({
         )}
       </div>
 
-      {/* Dynamic Security Custom Dialog Overlay */}
+      {/* Dialog de Confirmação */}
       {confirmDialog && confirmDialog.isOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[9999] animate-fade-in">
           <div className="bg-zinc-950 border border-gold-500/20 rounded-md max-w-md w-full p-6 shadow-2xl shadow-black relative animate-scale-up">
-            {/* Small top accent line */}
             <div
               className={`absolute top-0 left-0 right-0 h-1 rounded-t-md ${confirmDialog.isDestructive ? "bg-red-600" : "bg-gold-500"}`}
             ></div>

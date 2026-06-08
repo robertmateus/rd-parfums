@@ -18,14 +18,18 @@ export default function ProductDrawer({
   const [selectedVolume, setSelectedVolume] = useState('');
   const [engravingText, setEngravingText] = useState('');
   const [giftWrap, setGiftWrap] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
   const [justAddedSign, setJustAddedSign] = useState(false);
 
-  // Initialize selected volume when perfume opens
+  // Initialize selected volume and gallery image when perfume opens
   useEffect(() => {
     if (perfume) {
       setSelectedVolume(perfume.volumeAvailable[0]);
       setEngravingText('');
       setGiftWrap(false);
+      setSelectedImage(
+        perfume.images && perfume.images.length > 0 ? perfume.images[0] : perfume.image,
+      );
     }
   }, [perfume]);
 
@@ -88,12 +92,38 @@ export default function ProductDrawer({
               {/* Image Preview inside modal */}
               <div className="w-64 h-64 md:w-72 md:h-72 bg-luxury-900 overflow-hidden relative border border-gold-950/20 rounded-sm mb-6 shadow-2xl">
                 <img
-                  src={perfume.image}
+                  src={selectedImage || perfume.image}
                   alt={perfume.name}
                   className="w-full h-full object-cover animate-fade-in"
                   referrerPolicy="no-referrer"
                 />
               </div>
+
+              {((perfume.images && perfume.images.length > 1) || (!perfume.images && perfume.image)) && (
+                <div className="grid grid-cols-5 gap-2 w-full mb-6">
+                  {(perfume.images && perfume.images.length > 0 ? perfume.images : [perfume.image]).map(
+                    (img, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedImage(img)}
+                        className={`h-16 rounded-sm overflow-hidden border transition-all duration-200 focus:outline-none ${
+                          selectedImage === img
+                            ? 'border-gold-300 ring-2 ring-gold-300/40'
+                            : 'border-zinc-800 hover:border-gold-400'
+                        }`}
+                      >
+                        <img
+                          src={img}
+                          alt={`${perfume.name} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
 
               {/* Title, Category & Description */}
               <div className="flex flex-col items-center">

@@ -1,0 +1,39 @@
+{
+  "env": [
+    {
+      "key": "VITE_FIREBASE_API_KEY",
+      "value": "Your Firebase API Key",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_AUTH_DOMAIN",
+      "value": "your-project.firebaseapp.com",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_PROJECT_ID",
+      "value": "Your Firebase Project ID",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_STORAGE_BUCKET",
+      "value": "your-project.appspot.com",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_MESSAGING_SENDER_ID",
+      "value": "Your Messaging Sender ID",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_APP_ID",
+      "value": "Your Firebase App ID",
+      "target": ["production", "preview", "development"]
+    },
+    {
+      "key": "VITE_FIREBASE_MEASUREMENT_ID",
+      "value": "Your Measurement ID (optional)",
+      "target": ["production", "preview", "development"]
+    }
+  ]
+}
