@@ -105,26 +105,43 @@ export default function AdminPanel({
     }
   };
 
+  const handleGalleryFiles = (files: FileList | File[]) => {
+    const filesArray = Array.from(files);
+    const availableSlots = 5 - galleryImages.length;
+    if (availableSlots <= 0) {
+      showNotification("Máximo de 5 imagens permitido!", "error");
+      return;
+    }
+
+    if (filesArray.length > availableSlots) {
+      showNotification(
+        `Foram adicionadas apenas ${availableSlots} imagem(ns) para respeitar o limite de 5.`,
+        "error",
+      );
+    }
+
+    filesArray.slice(0, availableSlots).forEach((file) => {
+      compressAndAddToGallery(file);
+    });
+  };
+
   const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      compressAndAddToGallery(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleGalleryFiles(e.target.files);
+      e.target.value = "";
     }
   };
 
   const handleGalleryDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      compressAndAddToGallery(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleGalleryFiles(e.dataTransfer.files);
     }
+    setDragActive(false);
   };
 
   const compressAndAddToGallery = (file: File) => {
-    if (galleryImages.length >= 5) {
-      showNotification("Máximo de 5 imagens permitido!", "error");
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new window.Image();
@@ -150,11 +167,14 @@ export default function AdminPanel({
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
-          setGalleryImages([...galleryImages, compressedBase64]);
-          showNotification(
-            `Foto ${galleryImages.length + 1}/5 adicionada à galeria!`,
-            "success",
-          );
+          setGalleryImages((prev) => {
+            const next = [...prev, compressedBase64];
+            showNotification(
+              `Foto ${next.length}/5 adicionada à galeria!`,
+              "success",
+            );
+            return next;
+          });
         }
       };
       img.src = event.target?.result as string;
@@ -1394,6 +1414,7 @@ export default function AdminPanel({
                               type="file"
                               id="perfume-gallery-upload"
                               accept="image/*"
+                              multiple
                               onChange={handleGalleryFileChange}
                               className="hidden"
                             />
